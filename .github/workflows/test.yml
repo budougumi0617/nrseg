@@ -1,0 +1,35 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+name: test
+jobs:
+  test:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    env:
+      PIXELA_USER: ${{ secrets.PIXELA_USER }}
+      PIXELA_TOKEN: ${{ secrets.PIXELA_TOKEN }}
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      if: success()
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15' # The Go version to download (if necessary) and use.
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Use Cache
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Download Modules
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: go mod download
+    - name: Run tests
+      run: go test -v -covermode=atomic
