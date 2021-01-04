@@ -17,6 +17,7 @@ func TestProcess(t *testing.T) {
 import (
 	"context"
 	"fmt"
+	"net/http"
 )
 
 type S struct{}
@@ -30,12 +31,17 @@ func SampleFunc(ctx context.Context) {
 	fmt.Println("Hello, playground")
 	fmt.Println("end function")
 }
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
+}
 `,
 			want: `package main
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
@@ -52,6 +58,11 @@ func SampleFunc(ctx context.Context) {
 	defer newrelic.FromContext(ctx).StartSegment("slow").End()
 	fmt.Println("Hello, playground")
 	fmt.Println("end function")
+}
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	defer newrelic.FromContext(req.Context()).StartSegment("sample_handler").End()
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
 }
 `,
 		},
