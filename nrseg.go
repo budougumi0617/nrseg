@@ -35,7 +35,9 @@ func Process(filename string, src []byte) ([]byte, error) {
 				// TODO: no append if exist calling statement of newrelic.FromContext.
 				// TODO: get context variable name from function/method argument.
 				// TODO: create segment name by function/method name.
-				// TODO: support http.Request instead of context.Context
+				// TODO: support *http.Request instead of context.Context
+				// TODO: get *http.Request variable name from function/method argument.
+				// TODO: skip if comment go:nrsegignore in function/method comment.
 				ds := buildDeferStmt(pkg, "ctx", "slow")
 				rds := buildDeferStmtWithHttpRequest(pkg, "req", "slow")
 				fd.Body.List = append([]ast.Stmt{ds, rds}, fd.Body.List...)
