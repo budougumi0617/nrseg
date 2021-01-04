@@ -99,3 +99,36 @@ func buildDeferStmt(pkgName, ctxName, segName string) *ast.DeferStmt {
 		},
 	}
 }
+
+// buildDeferStmt builds the defer statement with *http.Request.
+// ex:
+//    defer newrelic.FromContext(req.Context()).StartSegment("slow").End()
+func buildDeferStmtWithHttpRequest(pkgName, reqName, segName string) *ast.DeferStmt {
+	return &ast.DeferStmt{
+		Call: &ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   &ast.Ident{Name: pkgName},
+								Sel: &ast.Ident{Name: "FromContext"},
+							},
+							Args: []ast.Expr{
+								&ast.CallExpr{
+									Fun: &ast.SelectorExpr{
+										X:   &ast.Ident{Name: reqName},
+										Sel: &ast.Ident{Name: "Context"},
+									},
+								},
+							},
+						},
+						Sel: &ast.Ident{Name: "StartSegment"},
+					},
+					Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(segName)}},
+				},
+				Sel: &ast.Ident{Name: "End"},
+			},
+		},
+	}
+}
