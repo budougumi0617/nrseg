@@ -6,7 +6,9 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
@@ -34,12 +36,13 @@ func Process(filename string, src []byte) ([]byte, error) {
 			if fd.Body != nil {
 				// TODO: no append if exist calling statement of newrelic.FromContext.
 				// TODO: get context variable name from function/method argument.
-				// TODO: create segment name by function/method name.
 				// TODO: support *http.Request instead of context.Context
 				// TODO: get *http.Request variable name from function/method argument.
 				// TODO: skip if comment go:nrsegignore in function/method comment.
-				ds := buildDeferStmt(pkg, "ctx", "slow")
-				rds := buildDeferStmtWithHttpRequest(pkg, "req", "slow")
+				// TODO: ignore auto generated files.
+				sn := genSegName(fd.Name.Name)
+				ds := buildDeferStmt(pkg, "ctx", sn)
+				rds := buildDeferStmtWithHttpRequest(pkg, "req", sn)
 				fd.Body.List = append([]ast.Stmt{ds, rds}, fd.Body.List...)
 			}
 		}
@@ -135,4 +138,14 @@ func buildDeferStmtWithHttpRequest(pkgName, reqName, segName string) *ast.DeferS
 			},
 		},
 	}
+}
+
+// https://www.golangprograms.com/golang-convert-string-into-snake-case.html
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func genSegName(n string) string {
+	snake := matchFirstCap.ReplaceAllString(n, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }
