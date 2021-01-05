@@ -49,13 +49,13 @@ import (
 type S struct{}
 
 func (s *S) SampleMethod(ctx context.Context) {
-	defer newrelic.FromContext(ctx).StartSegment("slow").End()
+	defer newrelic.FromContext(ctx).StartSegment("sample_method").End()
 	fmt.Println("Hello, playground")
 	fmt.Println("end function")
 }
 
 func SampleFunc(ctx context.Context) {
-	defer newrelic.FromContext(ctx).StartSegment("slow").End()
+	defer newrelic.FromContext(ctx).StartSegment("sample_func").End()
 	fmt.Println("Hello, playground")
 	fmt.Println("end function")
 }
@@ -78,6 +78,25 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {
 			if diff := cmp.Diff(got, []byte(tt.want)); len(diff) != 0 {
 				// t.Errorf("want\n%s\ngot\n%s\n", fwant, got)
 				t.Errorf("-got +want %v", diff)
+			}
+		})
+	}
+}
+
+func Test_genSegName(t *testing.T) {
+	tests := []struct {
+		name    string
+		n, want string
+	}{
+		{name: "Simple", n: "Simple", want: "simple"},
+		{name: "Camel", n: "camelCase", want: "camel_case"},
+		{name: "Pascal", n: "PascalCase", want: "pascal_case"},
+		{name: "HTML", n: "SaveHTML", want: "save_html"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := genSegName(tt.n); got != tt.want {
+				t.Errorf("genSegName() = %q, want %q", got, tt.want)
 			}
 		})
 	}
