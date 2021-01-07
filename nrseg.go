@@ -35,15 +35,21 @@ func Process(filename string, src []byte) ([]byte, error) {
 		if fd, ok := n.(*ast.FuncDecl); ok {
 			if fd.Body != nil {
 				// TODO: no append if exist calling statement of newrelic.FromContext.
-				// TODO: get context variable name from function/method argument.
-				// TODO: support *http.Request instead of context.Context
-				// TODO: get *http.Request variable name from function/method argument.
 				// TODO: skip if comment go:nrsegignore in function/method comment.
 				// TODO: ignore auto generated files.
 				sn := genSegName(fd.Name.Name)
-				ds := buildDeferStmt(pkg, "ctx", sn)
-				rds := buildDeferStmtWithHttpRequest(pkg, "req", sn)
-				fd.Body.List = append([]ast.Stmt{ds, rds}, fd.Body.List...)
+				vn, t := parseParams(fd.Type)
+				var ds ast.Stmt
+				switch t {
+				case TypeContext:
+					ds = buildDeferStmt(pkg, vn, sn)
+				case TypeHttpRequest:
+					ds = buildDeferStmtWithHttpRequest(pkg, vn, sn)
+				case TypeUnknown:
+					return true
+				}
+
+				fd.Body.List = append([]ast.Stmt{ds}, fd.Body.List...)
 			}
 		}
 		return true
@@ -148,4 +154,32 @@ func genSegName(n string) string {
 	snake := matchFirstCap.ReplaceAllString(n, "${1}_${2}")
 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
+}
+
+const (
+	TypeContext     = "context.Context"
+	TypeHttpRequest = "*http.Request"
+	TypeUnknown     = "Unknown"
+)
+
+func parseParams(t *ast.FuncType) (string, string) {
+	n, typ := "", TypeUnknown
+	for _, f := range t.Params.List {
+		if se, ok := f.Type.(*ast.SelectorExpr); ok {
+			// TODO: support named import
+			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "context" && se.Sel.Name == "Context" {
+				return f.Names[0].Name, TypeContext
+			}
+		}
+		if se, ok := f.Type.(*ast.StarExpr); ok {
+			if se, ok := se.X.(*ast.SelectorExpr); ok {
+				// TODO: support named import
+				if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "http" && se.Sel.Name == "Request" {
+					n = f.Names[0].Name
+					typ = TypeHttpRequest
+				}
+			}
+		}
+	}
+	return n, typ
 }
