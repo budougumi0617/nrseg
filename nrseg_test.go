@@ -10,6 +10,7 @@ import (
 )
 
 func TestProcess(t *testing.T) {
+	t.Parallel()
 	tests := [...]struct {
 		name, src, want string
 	}{
@@ -73,13 +74,13 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := Process("", []byte(tt.src))
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			if diff := cmp.Diff(got, []byte(tt.want)); len(diff) != 0 {
-				// t.Errorf("want\n%s\ngot\n%s\n", fwant, got)
 				t.Errorf("-got +want %v", diff)
 			}
 		})
@@ -87,6 +88,7 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func Test_genSegName(t *testing.T) {
+	t.Parallel()
 	tests := [...]struct {
 		name    string
 		n, want string
@@ -97,7 +99,9 @@ func Test_genSegName(t *testing.T) {
 		{name: "HTML", n: "SaveHTML", want: "save_html"},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := genSegName(tt.n); got != tt.want {
 				t.Errorf("genSegName() = %q, want %q", got, tt.want)
 			}
@@ -106,13 +110,16 @@ func Test_genSegName(t *testing.T) {
 }
 
 func Test_parseParams(t *testing.T) {
+	t.Parallel()
 	tests := [...]struct {
 		name     string
 		src      string
 		wantName string
 		wantType string
 	}{
-		{name: "Context", src: `
+		{
+			name: "Context",
+			src: `
 package main
 
 import (
@@ -120,19 +127,27 @@ import (
 )
 
 func Hoge(ctx context.Context) {}
-`, wantName: "ctx", wantType: TypeContext},
-		{name: "Http", src: `
-package min
+`,
+			wantName: "ctx", wantType: TypeContext,
+		},
+		{
+			name: "Http",
+			src: `
+package main
 
 import (
 	"net/http"
 )
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {}
-`, wantName: "req", wantType: TypeHttpRequest},
+`,
+			wantName: "req", wantType: TypeHttpRequest,
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fs := token.NewFileSet()
 			f, err := parser.ParseFile(fs, "sample.go", tt.src, parser.Mode(0))
 			if err != nil {
