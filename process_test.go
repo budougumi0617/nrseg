@@ -70,6 +70,58 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {
 }
 `,
 		},
+		{
+			name: "UseApplication",
+			src: `package router
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent/v3/integrations/nrgorilla"
+	"github.com/newrelic/go-agent/v3/newrelic"
+)
+
+func NewRouter(
+	nrapp *newrelic.Application,
+) http.Handler {
+	router := mux.NewRouter()
+	router.Use(nrgorilla.Middleware(nrapp))
+
+	return router
+}
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
+}
+`,
+			want: `package router
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent/v3/integrations/nrgorilla"
+	"github.com/newrelic/go-agent/v3/newrelic"
+)
+
+func NewRouter(
+	nrapp *newrelic.Application,
+) http.Handler {
+	router := mux.NewRouter()
+	router.Use(nrgorilla.Middleware(nrapp))
+
+	return router
+}
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	defer newrelic.FromContext(req.Context()).StartSegment("sample_handler").End()
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
+}
+`,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
