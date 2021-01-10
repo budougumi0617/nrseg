@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 type nrseg struct {
@@ -51,6 +52,10 @@ func (n *nrseg) run() error {
 			return nil
 		}
 		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+
+		if strings.HasSuffix(filepath.Base(path), "_test.go") {
 			return nil
 		}
 
