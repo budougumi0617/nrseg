@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 type nrseg struct {
@@ -40,6 +41,8 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 		errStream: errStream,
 	}, nil
 }
+
+var c = regexp.MustCompile("(?m)^// Code generated .* DO NOT EDIT\\.$")
 
 func (n *nrseg) run() error {
 	return filepath.Walk(n.in, func(path string, info os.FileInfo, err error) error {

@@ -15,6 +15,9 @@ import (
 )
 
 func Process(filename string, src []byte) ([]byte, error) {
+	if len(src) != 0 && c.Match(src) {
+		return src, nil
+	}
 	fs := token.NewFileSet()
 	f, err := parser.ParseFile(fs, filename, src, parser.ParseComments)
 	if err != nil {

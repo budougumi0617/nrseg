@@ -52,7 +52,6 @@ func TestNrseg_run(t *testing.T) {
 
 func validate(t *testing.T, gotpath, wantpath string) {
 	filepath.Walk(gotpath, func(path string, info os.FileInfo, err error) error {
-		// TODO: skip auto generated file
 		if filepath.Base(path) == "testdata" {
 			return fmt.Errorf("skip testdata dir")
 		}
