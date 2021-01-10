@@ -71,7 +71,7 @@ func (n *nrseg) run() error {
 		fmt.Fprintf(n.outStream, "got %q\n", got)
 		if !bytes.Equal(org, got) {
 			fmt.Fprintf(n.outStream, "update!! %q\n", path)
-			if n.in != n.dist {
+			if len(n.dist) != 0 && n.in != n.dist {
 				fmt.Fprintf(n.outStream, "update!! %q\n", n.dist)
 				return n.writeOtherPath(n.in, n.dist, path, got)
 			}
