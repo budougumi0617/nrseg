@@ -37,6 +37,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 				// TODO: no append if exist calling statement of newrelic.FromContext.
 				// TODO: skip if comment go:nrsegignore in function/method comment.
 				// TODO: ignore auto generated files.
+				// TODO: ignore testdata directory.
 				sn := genSegName(fd.Name.Name)
 				vn, t := parseParams(fd.Type)
 				var ds ast.Stmt
