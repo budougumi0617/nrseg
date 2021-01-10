@@ -44,14 +44,16 @@ func TestNrseg_run(t *testing.T) {
 			if err := n.run(); err != nil {
 				t.Fatalf("run() error = %v", err)
 			}
-			// validate(t, dist, tt.want)
-			validate(t, n.in, tt.want)
+			validate(t, dist, tt.want)
 		})
 	}
 }
 
 func validate(t *testing.T, gotpath, wantpath string) {
 	filepath.Walk(gotpath, func(path string, info os.FileInfo, err error) error {
+		if filepath.Base(path) == "testdata" {
+			return fmt.Errorf("skip testdata dir")
+		}
 		if info.IsDir() {
 			return nil
 		}
