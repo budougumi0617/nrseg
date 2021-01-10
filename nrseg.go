@@ -36,7 +36,6 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 
 	return &nrseg{
 		in:        dir,
-		dist:      "./tmp",
 		outStream: outStream,
 		errStream: errStream,
 	}, nil
@@ -72,11 +71,10 @@ func (n *nrseg) run() error {
 		fmt.Fprintf(n.outStream, "got %q\n", got)
 		if !bytes.Equal(org, got) {
 			fmt.Fprintf(n.outStream, "update!! %q\n", path)
-			// for test
-			//if n.in != n.dist {
-			//	fmt.Fprintf(n.outStream, "update!! %q\n", n.dist)
-			//	return n.writeOtherPath(n.in, n.dist, path, got)
-			//}
+			if n.in != n.dist {
+				fmt.Fprintf(n.outStream, "update!! %q\n", n.dist)
+				return n.writeOtherPath(n.in, n.dist, path, got)
+			}
 			if _, err := f.WriteAt(got, 0); err != nil {
 				fmt.Fprintf(n.errStream, "file update failed %q: %v\n", path, err)
 				return err
@@ -91,7 +89,19 @@ func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
 	if err != nil {
 		return err
 	}
-	dp := filepath.Join(dist, p)
+	distabs, err := filepath.Abs(dist)
+	if err != nil {
+		return err
+	}
+	dp := filepath.Join(distabs, p)
+	dpd := filepath.Dir(dp)
+	if _, err := os.Stat(dpd); os.IsNotExist(err) {
+		if err := os.Mkdir(dpd, 0777); err != nil {
+			fmt.Fprintf(n.outStream, "create dir failed at %q: %v\n", dpd, err)
+			return err
+		}
+	}
+
 	fmt.Fprintf(n.outStream, "update file %q\n", dp)
 	f, err := os.OpenFile(dp, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -99,6 +109,9 @@ func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
 	}
 	defer f.Close()
 	_, err = f.Write(got)
+	if err != nil {
+		fmt.Fprintf(n.outStream, "write file failed %v\n", err)
+	}
 	fmt.Printf("created at %q\n", dp)
 	return err
 }
