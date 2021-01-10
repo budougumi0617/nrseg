@@ -77,9 +77,12 @@ func addImport(fs *token.FileSet, f *ast.File) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// import already.
 		if path == NewRelicV3Pkg {
-			// import already.
-			return spec.Name.Name, nil
+			if spec.Name != nil {
+				return spec.Name.Name, nil
+			}
+			return "", nil
 		}
 	}
 	astutil.AddImport(fs, f, NewRelicV3Pkg)
