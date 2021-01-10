@@ -52,7 +52,6 @@ func (n *nrseg) run() error {
 			return nil
 		}
 
-		// TODO: ignore auto generated file.
 		fmt.Fprintf(n.outStream, "start %q\n", path)
 		f, err := os.OpenFile(path, os.O_RDWR, 0664)
 		if err != nil {
