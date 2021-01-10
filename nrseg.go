@@ -2,184 +2,125 @@ package nrseg
 
 import (
 	"bytes"
-	"go/ast"
-	"go/format"
-	"go/parser"
-	"go/token"
-	"regexp"
-	"strconv"
-	"strings"
-
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/imports"
+	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
-func Process(filename string, src []byte) ([]byte, error) {
-	fs := token.NewFileSet()
-	f, err := parser.ParseFile(fs, filename, src, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-	// import newrelic pkg
-	pkg := "newrelic"
-	name, err := addImport(fs, f) // importされたpkgの名前
-	if err != nil {
-		return nil, err
-	}
-	if len(name) != 0 {
-		// change name if named import.
-		pkg = name
-	}
-
-	ast.Inspect(f, func(n ast.Node) bool {
-		if fd, ok := n.(*ast.FuncDecl); ok {
-			if fd.Body != nil {
-				// TODO: no append if exist calling statement of newrelic.FromContext.
-				// TODO: skip if comment go:nrsegignore in function/method comment.
-				// TODO: ignore auto generated files.
-				sn := genSegName(fd.Name.Name)
-				vn, t := parseParams(fd.Type)
-				var ds ast.Stmt
-				switch t {
-				case TypeContext:
-					ds = buildDeferStmt(pkg, vn, sn)
-				case TypeHttpRequest:
-					ds = buildDeferStmtWithHttpRequest(pkg, vn, sn)
-				case TypeUnknown:
-					return true
-				}
-
-				fd.Body.List = append([]ast.Stmt{ds}, fd.Body.List...)
-			}
-		}
-		return true
-	})
-
-	// gofmt
-	var fmtedBuf bytes.Buffer
-	if err := format.Node(&fmtedBuf, fs, f); err != nil {
-		return nil, err
-	}
-
-	// goimports
-	igot, err := imports.Process(filename, fmtedBuf.Bytes(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return igot, nil
+type nrseg struct {
+	in, dist             string
+	outStream, errStream io.Writer
 }
 
-const NewRelicV3Pkg = "github.com/newrelic/go-agent/v3/newrelic"
+func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
+	cn := args[0]
+	flags := flag.NewFlagSet(cn, flag.ContinueOnError)
+	flags.SetOutput(errStream)
 
-func addImport(fs *token.FileSet, f *ast.File) (string, error) {
-	for _, spec := range f.Imports {
-		path, err := strconv.Unquote(spec.Path.Value)
+	if err := flags.Parse(args[1:]); err != nil {
+		return nil, err
+	}
+
+	dir := "./"
+	nargs := flags.Args()
+	if len(nargs) > 1 {
+		msg := "execution path must be only one or no-set(current dirctory)."
+		return nil, fmt.Errorf(msg)
+	}
+	if len(nargs) == 1 {
+		dir = nargs[0]
+	}
+
+	return &nrseg{
+		in:        dir,
+		outStream: outStream,
+		errStream: errStream,
+	}, nil
+}
+
+func (n *nrseg) run() error {
+	return filepath.Walk(n.in, func(path string, info os.FileInfo, err error) error {
+		fmt.Fprintf(n.outStream, "walk %q\n", path)
+		if info.IsDir() {
+			return nil
+		}
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+
+		fmt.Fprintf(n.outStream, "start %q\n", path)
+		f, err := os.OpenFile(path, os.O_RDWR, 0664)
 		if err != nil {
-			return "", err
+			fmt.Fprintf(n.errStream, "cannot open %q: %v\n", path, err)
+			return err
 		}
-		if path == NewRelicV3Pkg {
-			// import already.
-			return spec.Name.Name, nil
+		defer f.Close()
+		org, err := ioutil.ReadAll(f)
+		if err != nil {
+			fmt.Fprintf(n.errStream, "cannot read %q: %v\n", path, err)
+			return err
 		}
-	}
-	astutil.AddImport(fs, f, NewRelicV3Pkg)
-	return "", nil
-}
-
-// buildDeferStmt builds the defer statement with args.
-// ex:
-//    defer newrelic.FromContext(ctx).StartSegment("slow").End()
-func buildDeferStmt(pkgName, ctxName, segName string) *ast.DeferStmt {
-	return &ast.DeferStmt{
-		Call: &ast.CallExpr{
-			Fun: &ast.SelectorExpr{
-				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   &ast.Ident{Name: pkgName},
-								Sel: &ast.Ident{Name: "FromContext"},
-							},
-							Args: []ast.Expr{&ast.Ident{Name: ctxName}},
-						},
-						Sel: &ast.Ident{Name: "StartSegment"},
-					},
-					Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(segName)}},
-				},
-				Sel: &ast.Ident{Name: "End"},
-			},
-		},
-	}
-}
-
-// buildDeferStmt builds the defer statement with *http.Request.
-// ex:
-//    defer newrelic.FromContext(req.Context()).StartSegment("slow").End()
-func buildDeferStmtWithHttpRequest(pkgName, reqName, segName string) *ast.DeferStmt {
-	return &ast.DeferStmt{
-		Call: &ast.CallExpr{
-			Fun: &ast.SelectorExpr{
-				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   &ast.Ident{Name: pkgName},
-								Sel: &ast.Ident{Name: "FromContext"},
-							},
-							Args: []ast.Expr{
-								&ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   &ast.Ident{Name: reqName},
-										Sel: &ast.Ident{Name: "Context"},
-									},
-								},
-							},
-						},
-						Sel: &ast.Ident{Name: "StartSegment"},
-					},
-					Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(segName)}},
-				},
-				Sel: &ast.Ident{Name: "End"},
-			},
-		},
-	}
-}
-
-// https://www.golangprograms.com/golang-convert-string-into-snake-case.html
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-func genSegName(n string) string {
-	snake := matchFirstCap.ReplaceAllString(n, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
-
-const (
-	TypeContext     = "context.Context"
-	TypeHttpRequest = "*http.Request"
-	TypeUnknown     = "Unknown"
-)
-
-func parseParams(t *ast.FuncType) (string, string) {
-	n, typ := "", TypeUnknown
-	for _, f := range t.Params.List {
-		if se, ok := f.Type.(*ast.SelectorExpr); ok {
-			// TODO: support named import
-			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "context" && se.Sel.Name == "Context" {
-				return f.Names[0].Name, TypeContext
+		got, err := Process(path, org)
+		if err != nil {
+			fmt.Fprintf(n.errStream, "Process failed %q: %v\n", path, err)
+			return err
+		}
+		fmt.Fprintf(n.outStream, "got %q\n", got)
+		if !bytes.Equal(org, got) {
+			fmt.Fprintf(n.outStream, "update!! %q\n", path)
+			if len(n.dist) != 0 && n.in != n.dist {
+				fmt.Fprintf(n.outStream, "update!! %q\n", n.dist)
+				return n.writeOtherPath(n.in, n.dist, path, got)
+			}
+			if _, err := f.WriteAt(got, 0); err != nil {
+				fmt.Fprintf(n.errStream, "file update failed %q: %v\n", path, err)
+				return err
 			}
 		}
-		if se, ok := f.Type.(*ast.StarExpr); ok {
-			if se, ok := se.X.(*ast.SelectorExpr); ok {
-				// TODO: support named import
-				if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "http" && se.Sel.Name == "Request" {
-					n = f.Names[0].Name
-					typ = TypeHttpRequest
-				}
-			}
+		return nil
+	})
+}
+
+func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
+	p, err := filepath.Rel(in, path)
+	if err != nil {
+		return err
+	}
+	distabs, err := filepath.Abs(dist)
+	if err != nil {
+		return err
+	}
+	dp := filepath.Join(distabs, p)
+	dpd := filepath.Dir(dp)
+	if _, err := os.Stat(dpd); os.IsNotExist(err) {
+		if err := os.Mkdir(dpd, 0777); err != nil {
+			fmt.Fprintf(n.outStream, "create dir failed at %q: %v\n", dpd, err)
+			return err
 		}
 	}
-	return n, typ
+
+	fmt.Fprintf(n.outStream, "update file %q\n", dp)
+	f, err := os.OpenFile(dp, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	_, err = f.Write(got)
+	if err != nil {
+		fmt.Fprintf(n.outStream, "write file failed %v\n", err)
+	}
+	fmt.Printf("created at %q\n", dp)
+	return err
+}
+
+// Run is entry point.
+func Run(args []string, outStream, errStream io.Writer) error {
+	nrseg, err := fill(args, outStream, errStream)
+	if err != nil {
+		return err
+	}
+	return nrseg.run()
 }
