@@ -35,7 +35,7 @@ func TestNrseg_run(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			dist := os.TempDir()
+			dist := t.TempDir()
 			n := &nrseg{
 				in:        tt.fields.path,
 				dist:      dist,
