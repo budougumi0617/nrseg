@@ -37,7 +37,6 @@ func Process(filename string, src []byte) ([]byte, error) {
 	ast.Inspect(f, func(n ast.Node) bool {
 		if fd, ok := n.(*ast.FuncDecl); ok {
 			if fd.Body != nil {
-				// TODO: no append if exist calling statement of newrelic.FromContext.
 				// TODO: skip if comment go:nrsegignore in function/method comment.
 				sn := genSegName(fd.Name.Name)
 				vn, t := parseParams(fd.Type)
