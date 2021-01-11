@@ -51,7 +51,10 @@ func Process(filename string, src []byte) ([]byte, error) {
 					return true
 				}
 
-				fd.Body.List = append([]ast.Stmt{ds}, fd.Body.List...)
+				if !existFromContext(pkg, fd.Body.List[0]) {
+					fd.Body.List = append([]ast.Stmt{ds}, fd.Body.List...)
+				}
+				return false
 			}
 		}
 		return true
@@ -90,6 +93,20 @@ func addImport(fs *token.FileSet, f *ast.File) (string, error) {
 	}
 	astutil.AddImport(fs, f, NewRelicV3Pkg)
 	return "", nil
+}
+
+func existFromContext(pn string, s ast.Stmt) bool {
+	var result bool
+	ast.Inspect(s, func(n ast.Node) bool {
+		if se, ok := n.(*ast.SelectorExpr); ok {
+			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == pn && se.Sel.Name == "FromContext" {
+				result = true
+				return false
+			}
+		}
+		return true
+	})
+	return result
 }
 
 // buildDeferStmt builds the defer statement with args.
