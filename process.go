@@ -48,7 +48,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 				case TypeHttpRequest:
 					ds = buildDeferStmtWithHttpRequest(fd.Body.Lbrace, pkg, vn, sn)
 				case TypeUnknown:
-					return true
+					return false
 				}
 
 				if !existFromContext(pkg, fd.Body.List[0]) {
