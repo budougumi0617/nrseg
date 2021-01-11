@@ -46,7 +46,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 				case TypeContext:
 					ds = buildDeferStmt(fd.Body.Lbrace, pkg, vn, sn)
 				case TypeHttpRequest:
-					ds = buildDeferStmtWithHttpRequest(pkg, vn, sn)
+					ds = buildDeferStmtWithHttpRequest(fd.Body.Lbrace, pkg, vn, sn)
 				case TypeUnknown:
 					return true
 				}
@@ -126,7 +126,7 @@ func buildDeferStmt(pos token.Pos, pkgName, ctxName, segName string) *ast.DeferS
 // buildDeferStmt builds the defer statement with *http.Request.
 // ex:
 //    defer newrelic.FromContext(req.Context()).StartSegment("slow").End()
-func buildDeferStmtWithHttpRequest(pkgName, reqName, segName string) *ast.DeferStmt {
+func buildDeferStmtWithHttpRequest(pos token.Pos, pkgName, reqName, segName string) *ast.DeferStmt {
 	return &ast.DeferStmt{
 		Call: &ast.CallExpr{
 			Fun: &ast.SelectorExpr{
@@ -134,24 +134,32 @@ func buildDeferStmtWithHttpRequest(pkgName, reqName, segName string) *ast.DeferS
 					Fun: &ast.SelectorExpr{
 						X: &ast.CallExpr{
 							Fun: &ast.SelectorExpr{
-								X:   &ast.Ident{Name: pkgName},
-								Sel: &ast.Ident{Name: "FromContext"},
+								X:   &ast.Ident{NamePos: pos, Name: pkgName},
+								Sel: &ast.Ident{NamePos: pos, Name: "FromContext"},
 							},
+							Lparen: pos,
 							Args: []ast.Expr{
 								&ast.CallExpr{
 									Fun: &ast.SelectorExpr{
-										X:   &ast.Ident{Name: reqName},
-										Sel: &ast.Ident{Name: "Context"},
+										X:   &ast.Ident{NamePos: pos, Name: reqName},
+										Sel: &ast.Ident{NamePos: pos, Name: "Context"},
 									},
+									Rparen: pos,
 								},
 							},
+							Rparen: pos,
 						},
-						Sel: &ast.Ident{Name: "StartSegment"},
+						Sel: &ast.Ident{NamePos: pos, Name: "StartSegment"},
 					},
-					Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(segName)}},
+					Args: []ast.Expr{&ast.BasicLit{
+						ValuePos: pos,
+						Kind:     token.STRING,
+						Value:    strconv.Quote(segName),
+					}},
 				},
-				Sel: &ast.Ident{Name: "End"},
+				Sel: &ast.Ident{NamePos: pos, Name: "End"},
 			},
+			Rparen: pos,
 		},
 	}
 }

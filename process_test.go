@@ -40,6 +40,7 @@ func SampleFunc(ctx context.Context) {
 }
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	// comment 1
 	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
 }
 `,
@@ -72,6 +73,7 @@ func SampleFunc(ctx context.Context) {
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {
 	defer newrelic.FromContext(req.Context()).StartSegment("sample_handler").End()
+	// comment 1
 	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
 }
 `,
