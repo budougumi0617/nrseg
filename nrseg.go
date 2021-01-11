@@ -48,7 +48,7 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	flags.BoolVar(&v, "v", false, vdesc)
 
 	var ignoreDirs string
-	idesc := "ignore directory names. ex: foo,bar,baz"
+	idesc := "ignore directory names. ex: foo,bar,baz\n(testdata directory is always ignored.)"
 	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
 	flags.StringVar(&ignoreDirs, "i", "", idesc)
 
@@ -68,7 +68,7 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	dir := "./"
 	nargs := flags.Args()
 	if len(nargs) > 1 {
-		msg := "execution path must be only one or no-set(current dirctory)."
+		msg := "execution path must be only one or no-set(current directory)."
 		return nil, fmt.Errorf(msg)
 	}
 	if len(nargs) == 1 {
@@ -96,7 +96,6 @@ func (n *nrseg) skipDir(p string) bool {
 
 func (n *nrseg) run() error {
 	return filepath.Walk(n.in, func(path string, info os.FileInfo, err error) error {
-		fmt.Fprintf(n.outStream, "walk %q\n", path)
 		if info.IsDir() && n.skipDir(path) {
 			return filepath.SkipDir
 		}
@@ -111,32 +110,24 @@ func (n *nrseg) run() error {
 			return nil
 		}
 
-		fmt.Fprintf(n.outStream, "start %q\n", path)
 		f, err := os.OpenFile(path, os.O_RDWR, 0664)
 		if err != nil {
-			fmt.Fprintf(n.errStream, "cannot open %q: %v\n", path, err)
 			return err
 		}
 		defer f.Close()
 		org, err := ioutil.ReadAll(f)
 		if err != nil {
-			fmt.Fprintf(n.errStream, "cannot read %q: %v\n", path, err)
 			return err
 		}
 		got, err := Process(path, org)
 		if err != nil {
-			fmt.Fprintf(n.errStream, "process failed %q: %v\n", path, err)
 			return err
 		}
-		fmt.Fprintf(n.outStream, "got %q\n", got)
 		if !bytes.Equal(org, got) {
-			fmt.Fprintf(n.outStream, "update!! %q\n", path)
 			if len(n.dist) != 0 && n.in != n.dist {
-				fmt.Fprintf(n.outStream, "update!! %q\n", n.dist)
 				return n.writeOtherPath(n.in, n.dist, path, got)
 			}
 			if _, err := f.WriteAt(got, 0); err != nil {
-				fmt.Fprintf(n.errStream, "file update failed %q: %v\n", path, err)
 				return err
 			}
 		}
