@@ -79,6 +79,49 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {
 `,
 		},
 		{
+			name: "AlreadySegmentCall",
+			src: `package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/newrelic/go-agent/v3/newrelic"
+)
+
+func SampleFunc(ctx context.Context) {
+	defer newrelic.FromContext(ctx).StartSegment("sample_func").End()
+	fmt.Println("Hello, playground")
+}
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	defer newrelic.FromContext(req.Context()).StartSegment("sample_handler").End()
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
+}
+`,
+			want: `package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/newrelic/go-agent/v3/newrelic"
+)
+
+func SampleFunc(ctx context.Context) {
+	defer newrelic.FromContext(ctx).StartSegment("sample_func").End()
+	fmt.Println("Hello, playground")
+}
+
+func SampleHandler(w http.ResponseWriter, req *http.Request) {
+	defer newrelic.FromContext(req.Context()).StartSegment("sample_handler").End()
+	fmt.Fprintf(w, "Hello, %q", req.URL.Path)
+}
+`,
+		},
+		{
 			name: "UseApplication",
 			src: `package router
 
