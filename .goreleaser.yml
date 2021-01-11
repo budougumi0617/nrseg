@@ -7,6 +7,10 @@ before:
 builds:
   -
     main: ./cmd/nrseg
+    ldflags:
+      - -s -w
+      - -X nrseg.Version={{.Version}}
+      - -X nrseg.Revision={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
 archives:
