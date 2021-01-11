@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 type nrseg struct {
@@ -41,6 +43,8 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	}, nil
 }
 
+var c = regexp.MustCompile("(?m)^// Code generated .* DO NOT EDIT\\.$")
+
 func (n *nrseg) run() error {
 	return filepath.Walk(n.in, func(path string, info os.FileInfo, err error) error {
 		fmt.Fprintf(n.outStream, "walk %q\n", path)
@@ -48,6 +52,10 @@ func (n *nrseg) run() error {
 			return nil
 		}
 		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+
+		if strings.HasSuffix(filepath.Base(path), "_test.go") {
 			return nil
 		}
 
