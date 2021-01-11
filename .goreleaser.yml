@@ -37,7 +37,7 @@ brews:
     name: nrseg
 
     # Github repository to push the tap to.
-    github:
+    tap:
       owner: budougumi0617
       name: homebrew-tap
 
