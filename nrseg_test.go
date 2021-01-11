@@ -1,7 +1,6 @@
 package nrseg
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -37,10 +36,11 @@ func TestNrseg_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dist := t.TempDir()
 			n := &nrseg{
-				in:        tt.fields.path,
-				dist:      dist,
-				outStream: tt.fields.outStream,
-				errStream: tt.fields.errStream,
+				in:         tt.fields.path,
+				dist:       dist,
+				ignoreDirs: []string{"testdata", "ignore"},
+				outStream:  tt.fields.outStream,
+				errStream:  tt.fields.errStream,
 			}
 			if err := n.run(); err != nil {
 				t.Fatalf("run() error = %v", err)
@@ -52,9 +52,6 @@ func TestNrseg_run(t *testing.T) {
 
 func validate(t *testing.T, gotpath, wantpath string) {
 	filepath.Walk(gotpath, func(path string, info os.FileInfo, err error) error {
-		if filepath.Base(path) == "testdata" {
-			return fmt.Errorf("skip testdata dir")
-		}
 		if info.IsDir() {
 			return nil
 		}
