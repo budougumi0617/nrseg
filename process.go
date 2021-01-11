@@ -36,9 +36,10 @@ func Process(filename string, src []byte) ([]byte, error) {
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		if fd, ok := n.(*ast.FuncDecl); ok {
+			if findIgnoreComment(fd.Doc) {
+				return false
+			}
 			if fd.Body != nil {
-				// TODO: no append if exist calling statement of newrelic.FromContext.
-				// TODO: skip if comment go:nrsegignore in function/method comment.
 				sn := genSegName(fd.Name.Name)
 				vn, t := parseParams(fd.Type)
 				var ds ast.Stmt
@@ -93,6 +94,20 @@ func addImport(fs *token.FileSet, f *ast.File) (string, error) {
 	}
 	astutil.AddImport(fs, f, NewRelicV3Pkg)
 	return "", nil
+}
+
+var nrignoreReg = regexp.MustCompile("(?m)^// nrseg:ignore .*$")
+
+func findIgnoreComment(cg *ast.CommentGroup) bool {
+	if cg == nil {
+		return false
+	}
+	for _, c := range cg.List {
+		if nrignoreReg.MatchString(c.Text) {
+			return true
+		}
+	}
+	return false
 }
 
 func existFromContext(pn string, s ast.Stmt) bool {
