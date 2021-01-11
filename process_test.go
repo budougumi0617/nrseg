@@ -32,8 +32,11 @@ func (s *S) SampleMethod(ctx context.Context) {
 }
 
 func SampleFunc(ctx context.Context) {
+	// comment 1
 	fmt.Println("Hello, playground")
+	// comment 2
 	fmt.Println("end function")
+	// comment 3
 }
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {
@@ -60,8 +63,11 @@ func (s *S) SampleMethod(ctx context.Context) {
 
 func SampleFunc(ctx context.Context) {
 	defer newrelic.FromContext(ctx).StartSegment("sample_func").End()
+	// comment 1
 	fmt.Println("Hello, playground")
+	// comment 2
 	fmt.Println("end function")
+	// comment 3
 }
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {
