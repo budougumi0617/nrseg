@@ -2,6 +2,7 @@ package nrseg
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,8 +13,18 @@ import (
 	"strings"
 )
 
+var (
+	// ErrShowVersion returns when set version flag.
+	ErrShowVersion = errors.New("show version")
+)
+
+var (
+	version = "dev"
+)
+
 type nrseg struct {
 	in, dist             string
+	ignoreDirs           []string
 	outStream, errStream io.Writer
 }
 
@@ -22,8 +33,27 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	flags := flag.NewFlagSet(cn, flag.ContinueOnError)
 	flags.SetOutput(errStream)
 
+	var v bool
+	vdesc := "print version information and quit."
+	flags.BoolVar(&v, "version", false, vdesc)
+	flags.BoolVar(&v, "v", false, vdesc)
+
+	var ignoreDirs string
+	idesc := "ignore directory names. ex: foo,bar,baz"
+	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
+	flags.StringVar(&ignoreDirs, "i", "", idesc)
+
 	if err := flags.Parse(args[1:]); err != nil {
 		return nil, err
+	}
+	if v {
+		fmt.Fprintf(errStream, "%s version %s\n", cn, version)
+		return nil, ErrShowVersion
+	}
+
+	dirs := []string{"testdata"}
+	if len(ignoreDirs) != 0 {
+		dirs = append(dirs, strings.Split(ignoreDirs, ",")...)
 	}
 
 	dir := "./"
@@ -37,17 +67,30 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	}
 
 	return &nrseg{
-		in:        dir,
-		outStream: outStream,
-		errStream: errStream,
+		in:         dir,
+		ignoreDirs: dirs,
+		outStream:  outStream,
+		errStream:  errStream,
 	}, nil
 }
 
 var c = regexp.MustCompile("(?m)^// Code generated .* DO NOT EDIT\\.$")
 
+func (n *nrseg) skipDir(p string) bool {
+	for _, dir := range n.ignoreDirs {
+		if filepath.Base(p) == dir {
+			return true
+		}
+	}
+	return false
+}
+
 func (n *nrseg) run() error {
 	return filepath.Walk(n.in, func(path string, info os.FileInfo, err error) error {
 		fmt.Fprintf(n.outStream, "walk %q\n", path)
+		if info.IsDir() && n.skipDir(path) {
+			return filepath.SkipDir
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -73,7 +116,7 @@ func (n *nrseg) run() error {
 		}
 		got, err := Process(path, org)
 		if err != nil {
-			fmt.Fprintf(n.errStream, "Process failed %q: %v\n", path, err)
+			fmt.Fprintf(n.errStream, "process failed %q: %v\n", path, err)
 			return err
 		}
 		fmt.Fprintf(n.outStream, "got %q\n", got)
