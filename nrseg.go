@@ -18,18 +18,13 @@ var (
 	ErrShowVersion = errors.New("show version")
 )
 
-var (
-	Version  = "devel"
-	Revision = "unset"
-)
-
 type nrseg struct {
 	in, dist             string
 	ignoreDirs           []string
 	outStream, errStream io.Writer
 }
 
-func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
+func fill(args []string, outStream, errStream io.Writer, version, revision string) (*nrseg, error) {
 	cn := args[0]
 	flags := flag.NewFlagSet(cn, flag.ContinueOnError)
 	flags.SetOutput(errStream)
@@ -56,7 +51,7 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 		return nil, err
 	}
 	if v {
-		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, Version, Revision)
+		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, version, revision)
 		return nil, ErrShowVersion
 	}
 
@@ -168,8 +163,8 @@ func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
 }
 
 // Run is entry point.
-func Run(args []string, outStream, errStream io.Writer) error {
-	nrseg, err := fill(args, outStream, errStream)
+func Run(args []string, outStream, errStream io.Writer, version, revision string) error {
+	nrseg, err := fill(args, outStream, errStream, version, revision)
 	if err != nil {
 		return err
 	}
