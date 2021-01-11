@@ -19,7 +19,8 @@ var (
 )
 
 var (
-	version = "dev"
+	Version  = "devel"
+	Revision = "unset"
 )
 
 type nrseg struct {
@@ -32,6 +33,14 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 	cn := args[0]
 	flags := flag.NewFlagSet(cn, flag.ContinueOnError)
 	flags.SetOutput(errStream)
+	flags.Usage = func() {
+		fmt.Fprintf(
+			flag.CommandLine.Output(),
+			"Insert function segments into any function/method for Newrelic APM.\n\nUsage of %s:\n",
+			os.Args[0],
+		)
+		flags.PrintDefaults()
+	}
 
 	var v bool
 	vdesc := "print version information and quit."
@@ -47,7 +56,7 @@ func fill(args []string, outStream, errStream io.Writer) (*nrseg, error) {
 		return nil, err
 	}
 	if v {
-		fmt.Fprintf(errStream, "%s version %s\n", cn, version)
+		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, Version, Revision)
 		return nil, ErrShowVersion
 	}
 
