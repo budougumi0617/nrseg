@@ -132,7 +132,7 @@ import (
 type S struct{}
 
 func (s *S) SampleMethod(ctx context.Context) {
-	defer newrelic.FromContext(ctx).StartSegment("sample_method").End()
+	defer newrelic.FromContext(ctx).StartSegment("s_sample_method").End()
 	fmt.Println("Hello, playground")
 }
 
