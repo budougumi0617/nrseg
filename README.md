@@ -33,9 +33,9 @@ import (
   "net/http"
 )
 
-type S struct{}
+type FooBar struct{}
 
-func (s *S) SampleMethod(ctx context.Context) {
+func (f *FooBar) SampleMethod(ctx context.Context) {
   fmt.Println("Hello, playground")
   fmt.Println("end function")
 }
@@ -68,10 +68,10 @@ import (
   "github.com/newrelic/go-agent/v3/newrelic"
 )
 
-type S struct{}
+type FooBar struct{}
 
-func (s *S) SampleMethod(ctx context.Context) {
-  defer newrelic.FromContext(ctx).StartSegment("sample_method").End()
+func (f *FooBar) SampleMethod(ctx context.Context) {
+  defer newrelic.FromContext(ctx).StartSegment("foo_bar_sample_method").End()
   fmt.Println("Hello, playground")
   fmt.Println("end function")
 }
