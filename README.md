@@ -104,7 +104,10 @@ func IgnoreHandler(w http.ResponseWriter, req *http.Request) {
 - [x] This processing is recursively repeated.
 - [x] Able to ignore function/method by `nrseg:ignore` comment.
 - [x] Ignore specified directories with cli option `-i`/`-ignore`.
-- [ ] Remove all `Function segments`.
+- [ ] Remove all `Function segments`
+- [ ] Add: `dry-run` option
+- [ ] Validate: Show a function that doesn't call the segment.
+- [ ] Support anonymous function
 
 ## Synopsis
 ```
@@ -129,6 +132,24 @@ Usage of nrseg:
         print version information and quit.
 exit status 1
 
+```
+
+## Limitation
+nrseg inserts only `function segments`, so we need the initialize of Newrelic manually. 
+
+- [Install New Relic for Go][segment]
+- [Monitor a transaction by wrapping an HTTP handler][nr_handler]
+
+[nr_handler]: https://docs.newrelic.com/docs/agents/go-agent/instrumentation/instrument-go-transactions#http-handler-txns
+[segment]: https://docs.newrelic.com/docs/agents/go-agent/installation/install-new-relic-go
+
+If we want to adopt Newrelic to our application, , we write initialize, and newrelic.WrapHandleFunc manually before execute this tool.
+```go
+app, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("my_application"),
+		newrelic.ConfigLicense(newrelicLicenseKey),
+		newrelic.ConfigDistributedTracerEnabled(true),
+	)
 ```
 
 ## Installation
