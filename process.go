@@ -40,7 +40,20 @@ func Process(filename string, src []byte) ([]byte, error) {
 				return false
 			}
 			if fd.Body != nil {
+				var prefix string
+				if fd.Recv != nil && len(fd.Recv.List) > 0 {
+					if rn, ok := fd.Recv.List[0].Type.(*ast.StarExpr); ok {
+						if idt, ok := rn.X.(*ast.Ident); ok {
+							prefix = genSegName(idt.Name)
+						}
+					} else if idt, ok := fd.Recv.List[0].Type.(*ast.Ident); ok {
+						prefix = genSegName(idt.Name)
+					}
+				}
 				sn := genSegName(fd.Name.Name)
+				if len(prefix) != 0 {
+					sn = prefix + "_" + sn
+				}
 				vn, t := parseParams(fd.Type)
 				var ds ast.Stmt
 				switch t {
