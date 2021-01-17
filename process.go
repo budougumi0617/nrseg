@@ -141,37 +141,25 @@ func existFromContext(pn string, s ast.Stmt) bool {
 // ex:
 //    defer newrelic.FromContext(ctx).StartSegment("slow").End()
 func buildDeferStmt(pos token.Pos, pkgName, ctxName, segName string) *ast.DeferStmt {
-	return &ast.DeferStmt{
-		Call: &ast.CallExpr{
-			Fun: &ast.SelectorExpr{
-				X: &ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   &ast.Ident{NamePos: pos, Name: pkgName},
-								Sel: &ast.Ident{NamePos: pos, Name: "FromContext"},
-							},
-							Args: []ast.Expr{&ast.Ident{NamePos: pos, Name: ctxName}},
-						},
-						Sel: &ast.Ident{NamePos: pos, Name: "StartSegment"},
-					},
-					Args: []ast.Expr{&ast.BasicLit{
-						ValuePos: pos,
-						Kind:     token.STRING,
-						Value:    strconv.Quote(segName),
-					}},
-				},
-				Sel: &ast.Ident{NamePos: pos, Name: "End"},
-			},
-			Rparen: pos,
-		},
-	}
+	arg := &ast.Ident{NamePos: pos, Name: ctxName}
+	return skeletonDeferStmt(pos, arg, pkgName, segName)
 }
 
 // buildDeferStmt builds the defer statement with *http.Request.
 // ex:
 //    defer newrelic.FromContext(req.Context()).StartSegment("slow").End()
 func buildDeferStmtWithHttpRequest(pos token.Pos, pkgName, reqName, segName string) *ast.DeferStmt {
+	arg := &ast.CallExpr{
+		Fun: &ast.SelectorExpr{
+			X:   &ast.Ident{NamePos: pos, Name: reqName},
+			Sel: &ast.Ident{NamePos: pos, Name: "Context"},
+		},
+		Rparen: pos,
+	}
+	return skeletonDeferStmt(pos, arg, pkgName, segName)
+}
+
+func skeletonDeferStmt(pos token.Pos, fcArg ast.Expr, pkgName, segName string) *ast.DeferStmt {
 	return &ast.DeferStmt{
 		Call: &ast.CallExpr{
 			Fun: &ast.SelectorExpr{
@@ -183,15 +171,7 @@ func buildDeferStmtWithHttpRequest(pos token.Pos, pkgName, reqName, segName stri
 								Sel: &ast.Ident{NamePos: pos, Name: "FromContext"},
 							},
 							Lparen: pos,
-							Args: []ast.Expr{
-								&ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   &ast.Ident{NamePos: pos, Name: reqName},
-										Sel: &ast.Ident{NamePos: pos, Name: "Context"},
-									},
-									Rparen: pos,
-								},
-							},
+							Args:   []ast.Expr{fcArg},
 							Rparen: pos,
 						},
 						Sel: &ast.Ident{NamePos: pos, Name: "StartSegment"},
