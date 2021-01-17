@@ -40,20 +40,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 				return false
 			}
 			if fd.Body != nil {
-				var prefix string
-				if fd.Recv != nil && len(fd.Recv.List) > 0 {
-					if rn, ok := fd.Recv.List[0].Type.(*ast.StarExpr); ok {
-						if idt, ok := rn.X.(*ast.Ident); ok {
-							prefix = genSegName(idt.Name)
-						}
-					} else if idt, ok := fd.Recv.List[0].Type.(*ast.Ident); ok {
-						prefix = genSegName(idt.Name)
-					}
-				}
-				sn := genSegName(fd.Name.Name)
-				if len(prefix) != 0 {
-					sn = prefix + "_" + sn
-				}
+				sn := getSegName(fd)
 				vn, t := parseParams(fd.Type)
 				var ds ast.Stmt
 				switch t {
@@ -189,11 +176,29 @@ func skeletonDeferStmt(pos token.Pos, fcArg ast.Expr, pkgName, segName string) *
 	}
 }
 
+func getSegName(fd *ast.FuncDecl) string {
+	var prefix string
+	if fd.Recv != nil && len(fd.Recv.List) > 0 {
+		if rn, ok := fd.Recv.List[0].Type.(*ast.StarExpr); ok {
+			if idt, ok := rn.X.(*ast.Ident); ok {
+				prefix = toSnake(idt.Name)
+			}
+		} else if idt, ok := fd.Recv.List[0].Type.(*ast.Ident); ok {
+			prefix = toSnake(idt.Name)
+		}
+	}
+	sn := toSnake(fd.Name.Name)
+	if len(prefix) != 0 {
+		sn = prefix + "_" + sn
+	}
+	return sn
+}
+
 // https://www.golangprograms.com/golang-convert-string-into-snake-case.html
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 
-func genSegName(n string) string {
+func toSnake(n string) string {
 	snake := matchFirstCap.ReplaceAllString(n, "${1}_${2}")
 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
