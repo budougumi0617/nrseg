@@ -306,8 +306,8 @@ func Test_genSegName(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := genSegName(tt.n); got != tt.want {
-				t.Errorf("genSegName() = %q, want %q", got, tt.want)
+			if got := toSnake(tt.n); got != tt.want {
+				t.Errorf("toSnake() = %q, want %q", got, tt.want)
 			}
 		})
 	}
