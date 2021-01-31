@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -23,6 +25,7 @@ type nrseg struct {
 	in, dist             string
 	ignoreDirs           []string
 	outStream, errStream io.Writer
+	errFlag              bool
 }
 
 func fill(args []string, outStream, errStream io.Writer, version, revision string) (*nrseg, error) {
@@ -102,7 +105,7 @@ func fill2(args []string, outStream, errStream io.Writer, version, revision stri
 	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
 	flags.StringVar(&ignoreDirs, "i", "", idesc)
 
-	if err := flags.Parse(args[1:]); err != nil {
+	if err := flags.Parse(args[2:]); err != nil {
 		return nil, err
 	}
 	if v {
@@ -172,7 +175,7 @@ func (n *nrseg) run() error {
 		}
 
 		if n.inspectMode {
-
+			return n.Inspect(path, org)
 		} else {
 			got, err := Process(path, org)
 			if err != nil {
@@ -223,6 +226,25 @@ func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
 	return err
 }
 
+func (n *nrseg) reportf(filename string, fs *token.FileSet, pos token.Pos, fd *ast.FuncDecl) {
+	var rcv string
+	if fd.Recv != nil && len(fd.Recv.List) > 0 {
+		if rn, ok := fd.Recv.List[0].Type.(*ast.StarExpr); ok {
+			if idt, ok := rn.X.(*ast.Ident); ok {
+				rcv = idt.Name
+			}
+		} else if idt, ok := fd.Recv.List[0].Type.(*ast.Ident); ok {
+			rcv = idt.Name
+		}
+	}
+
+	if len(rcv) != 0 {
+		fmt.Fprintf(n.errStream, "%s:%d:0: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
+		return
+	}
+	fmt.Fprintf(n.errStream, "%s:%d:0: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
+}
+
 // Run is entry point.
 func Run(args []string, outStream, errStream io.Writer, version, revision string) error {
 	var nrseg *nrseg
@@ -235,5 +257,9 @@ func Run(args []string, outStream, errStream io.Writer, version, revision string
 	if err != nil {
 		return err
 	}
-	return nrseg.run()
+	err = nrseg.run()
+	if nrseg.errFlag {
+		err = errors.New("find error")
+	}
+	return err
 }
