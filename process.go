@@ -2,6 +2,7 @@ package nrseg
 
 import (
 	"bytes"
+	"errors"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -39,7 +40,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 			if findIgnoreComment(fd.Doc) {
 				return false
 			}
-			if fd.Body != nil {
+			if fd.Body != nil && len(fd.Body.List) > 0 {
 				sn := getSegName(fd)
 				vn, t := parseParams(fd.Type)
 				var ds ast.Stmt
@@ -79,6 +80,21 @@ func Process(filename string, src []byte) ([]byte, error) {
 const NewRelicV3Pkg = "github.com/newrelic/go-agent/v3/newrelic"
 
 func addImport(fs *token.FileSet, f *ast.File) (string, error) {
+	pkg, err := findImport(fs, f)
+	if err == nil {
+		return pkg, nil
+	}
+	if errors.Is(err, ErrNoImportNrPkg) {
+		astutil.AddImport(fs, f, NewRelicV3Pkg)
+		return "", nil
+	}
+
+	return "", err
+}
+
+var ErrNoImportNrPkg = errors.New("not import newrelic pkg")
+
+func findImport(fs *token.FileSet, f *ast.File) (string, error) {
 	for _, spec := range f.Imports {
 		path, err := strconv.Unquote(spec.Path.Value)
 		if err != nil {
@@ -92,8 +108,7 @@ func addImport(fs *token.FileSet, f *ast.File) (string, error) {
 			return "", nil
 		}
 	}
-	astutil.AddImport(fs, f, NewRelicV3Pkg)
-	return "", nil
+	return "", ErrNoImportNrPkg
 }
 
 var nrignoreReg = regexp.MustCompile("(?m)^// nrseg:ignore .*$")

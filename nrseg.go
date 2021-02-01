@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,9 +21,11 @@ var (
 )
 
 type nrseg struct {
+	inspectMode          bool
 	in, dist             string
 	ignoreDirs           []string
 	outStream, errStream io.Writer
+	errFlag              bool
 }
 
 func fill(args []string, outStream, errStream io.Writer, version, revision string) (*nrseg, error) {
@@ -78,6 +82,61 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 	}, nil
 }
 
+func fill2(args []string, outStream, errStream io.Writer, version, revision string) (*nrseg, error) {
+	cn := args[0]
+	flags := flag.NewFlagSet(cn, flag.ContinueOnError)
+	flags.SetOutput(errStream)
+	flags.Usage = func() {
+		fmt.Fprintf(
+			flag.CommandLine.Output(),
+			"Insert function segments into any function/method for Newrelic APM.\n\nUsage of %s:\n",
+			os.Args[0],
+		)
+		flags.PrintDefaults()
+	}
+
+	var v bool
+	vdesc := "print version information and quit."
+	flags.BoolVar(&v, "version", false, vdesc)
+	flags.BoolVar(&v, "v", false, vdesc)
+
+	var ignoreDirs string
+	idesc := "ignore directory names. ex: foo,bar,baz\n(testdata directory is always ignored.)"
+	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
+	flags.StringVar(&ignoreDirs, "i", "", idesc)
+
+	if err := flags.Parse(args[2:]); err != nil {
+		return nil, err
+	}
+	if v {
+		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, version, revision)
+		return nil, ErrShowVersion
+	}
+
+	dirs := []string{"testdata"}
+	if len(ignoreDirs) != 0 {
+		dirs = append(dirs, strings.Split(ignoreDirs, ",")...)
+	}
+
+	dir := "./"
+	nargs := flags.Args()
+	if len(nargs) > 2 {
+		msg := "execution path must be only one or no-set(current directory)."
+		return nil, fmt.Errorf(msg)
+	}
+	if len(nargs) == 2 {
+		dir = nargs[1]
+	}
+
+	return &nrseg{
+		inspectMode: true,
+		in:          dir,
+		ignoreDirs:  dirs,
+		outStream:   outStream,
+		errStream:   errStream,
+	}, nil
+}
+
 var c = regexp.MustCompile("(?m)^// Code generated .* DO NOT EDIT\\.$")
 
 func (n *nrseg) skipDir(p string) bool {
@@ -114,16 +173,21 @@ func (n *nrseg) run() error {
 		if err != nil {
 			return err
 		}
-		got, err := Process(path, org)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(org, got) {
-			if len(n.dist) != 0 && n.in != n.dist {
-				return n.writeOtherPath(n.in, n.dist, path, got)
-			}
-			if _, err := f.WriteAt(got, 0); err != nil {
+
+		if n.inspectMode {
+			return n.Inspect(path, org)
+		} else {
+			got, err := Process(path, org)
+			if err != nil {
 				return err
+			}
+			if !bytes.Equal(org, got) {
+				if len(n.dist) != 0 && n.in != n.dist {
+					return n.writeOtherPath(n.in, n.dist, path, got)
+				}
+				if _, err := f.WriteAt(got, 0); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -162,11 +226,40 @@ func (n *nrseg) writeOtherPath(in, dist, path string, got []byte) error {
 	return err
 }
 
+func (n *nrseg) reportf(filename string, fs *token.FileSet, pos token.Pos, fd *ast.FuncDecl) {
+	var rcv string
+	if fd.Recv != nil && len(fd.Recv.List) > 0 {
+		if rn, ok := fd.Recv.List[0].Type.(*ast.StarExpr); ok {
+			if idt, ok := rn.X.(*ast.Ident); ok {
+				rcv = idt.Name
+			}
+		} else if idt, ok := fd.Recv.List[0].Type.(*ast.Ident); ok {
+			rcv = idt.Name
+		}
+	}
+
+	if len(rcv) != 0 {
+		fmt.Fprintf(n.errStream, "%s:%d:1: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
+		return
+	}
+	fmt.Fprintf(n.errStream, "%s:%d:1: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
+}
+
 // Run is entry point.
 func Run(args []string, outStream, errStream io.Writer, version, revision string) error {
-	nrseg, err := fill(args, outStream, errStream, version, revision)
+	var nrseg *nrseg
+	var err error
+	if len(args) >= 2 && args[1] == "inspect" {
+		nrseg, err = fill2(args, outStream, errStream, version, revision)
+	} else {
+		nrseg, err = fill(args, outStream, errStream, version, revision)
+	}
 	if err != nil {
 		return err
 	}
-	return nrseg.run()
+	err = nrseg.run()
+	if nrseg.errFlag {
+		err = errors.New("find error")
+	}
+	return err
 }
