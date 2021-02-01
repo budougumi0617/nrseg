@@ -239,10 +239,10 @@ func (n *nrseg) reportf(filename string, fs *token.FileSet, pos token.Pos, fd *a
 	}
 
 	if len(rcv) != 0 {
-		fmt.Fprintf(n.errStream, "%s:%d:0: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
+		fmt.Fprintf(n.errStream, "%s:%d:1: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
 		return
 	}
-	fmt.Fprintf(n.errStream, "%s:%d:0: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
+	fmt.Fprintf(n.errStream, "%s:%d:1: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
 }
 
 // Run is entry point.
