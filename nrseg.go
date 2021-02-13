@@ -18,12 +18,12 @@ import (
 var (
 	// ErrShowVersion returns when set version flag.
 	ErrShowVersion = errors.New("show version")
-	ErrFlagTrue =errors.New("find error")
+	ErrFlagTrue    = errors.New("find error")
 )
 
 type nrseg struct {
 	inspectMode          bool
-	in, dist             string
+	in, dest             string
 	ignoreDirs           []string
 	outStream, errStream io.Writer
 	errFlag              bool
@@ -52,6 +52,10 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
 	flags.StringVar(&ignoreDirs, "i", "", idesc)
 
+	var destDir string
+	odesc := "destination directory."
+	flags.StringVar(&destDir, "destination", "", odesc)
+
 	if err := flags.Parse(args[1:]); err != nil {
 		return nil, err
 	}
@@ -77,6 +81,7 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 
 	return &nrseg{
 		in:         dir,
+		dest:       destDir,
 		ignoreDirs: dirs,
 		outStream:  outStream,
 		errStream:  errStream,
@@ -183,8 +188,8 @@ func (n *nrseg) run() error {
 				return err
 			}
 			if !bytes.Equal(org, got) {
-				if len(n.dist) != 0 && n.in != n.dist {
-					return n.writeOtherPath(n.in, n.dist, path, got)
+				if len(n.dest) != 0 && n.in != n.dest {
+					return n.writeOtherPath(n.in, n.dest, path, got)
 				}
 				if _, err := f.WriteAt(got, 0); err != nil {
 					return err
