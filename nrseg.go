@@ -18,6 +18,7 @@ import (
 var (
 	// ErrShowVersion returns when set version flag.
 	ErrShowVersion = errors.New("show version")
+	ErrFlagTrue =errors.New("find error")
 )
 
 type nrseg struct {
@@ -120,12 +121,12 @@ func fill2(args []string, outStream, errStream io.Writer, version, revision stri
 
 	dir := "./"
 	nargs := flags.Args()
-	if len(nargs) > 2 {
+	if len(nargs) > 1 {
 		msg := "execution path must be only one or no-set(current directory)."
 		return nil, fmt.Errorf(msg)
 	}
-	if len(nargs) == 2 {
-		dir = nargs[1]
+	if len(nargs) == 1 {
+		dir = nargs[0]
 	}
 
 	return &nrseg{
@@ -259,7 +260,7 @@ func Run(args []string, outStream, errStream io.Writer, version, revision string
 	}
 	err = nrseg.run()
 	if nrseg.errFlag {
-		err = errors.New("find error")
+		err = ErrFlagTrue
 	}
 	return err
 }
