@@ -12,6 +12,33 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestNrseg_Run_Default(t *testing.T) {
+	dest := t.TempDir()
+	tests := [...]struct {
+		name string
+		want string
+		args []string
+	}{
+		{
+			name: "basic",
+			want: "./testdata/want",
+			args: []string{"nrseg", "-destination", dest, "-i", "ignore", "./testdata/input"},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+
+			out := &bytes.Buffer{}
+			errs := &bytes.Buffer{}
+			if err := Run(tt.args, out, errs, "", ""); err != nil {
+				t.Fatalf("run() error = %v", err)
+			}
+			validate(t, dest, tt.want)
+		})
+	}
+}
+
 func TestNrseg_Run_Inspect(t *testing.T) {
 	tests := [...]struct {
 		name string
@@ -77,10 +104,10 @@ func TestNrseg_run(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			dist := t.TempDir()
+			dest := t.TempDir()
 			n := &nrseg{
 				in:         tt.fields.path,
-				dist:       dist,
+				dest:       dest,
 				ignoreDirs: []string{"testdata", "ignore"},
 				outStream:  tt.fields.outStream,
 				errStream:  tt.fields.errStream,
@@ -88,7 +115,7 @@ func TestNrseg_run(t *testing.T) {
 			if err := n.run(); err != nil {
 				t.Fatalf("run() error = %v", err)
 			}
-			validate(t, dist, tt.want)
+			validate(t, dest, tt.want)
 		})
 	}
 }
