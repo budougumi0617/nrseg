@@ -244,11 +244,12 @@ func (n *nrseg) reportf(filename string, fs *token.FileSet, pos token.Pos, fd *a
 		}
 	}
 
+	p := fs.File(pos).Position(pos)
 	if len(rcv) != 0 {
-		fmt.Fprintf(n.outStream, "%s:%d:1: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
+		fmt.Fprintf(n.outStream, "%s:%d:%d: %s.%s no insert segment\n", p.Filename, p.Line, p.Column, rcv, fd.Name.Name)
 		return
 	}
-	fmt.Fprintf(n.outStream, "%s:%d:1: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
+	fmt.Fprintf(n.outStream, "%s:%d:%d: %s no insert segment\n", p.Filename, p.Line, p.Column, fd.Name.Name)
 }
 
 // Run is entry point.
