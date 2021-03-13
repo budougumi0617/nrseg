@@ -42,8 +42,3 @@ linters:
     - unused
     - varcheck
     - whitespace
-
-issues:
-  exclude-rules:
-    - linters:
-        - staticcheck
