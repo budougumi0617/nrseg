@@ -36,7 +36,6 @@ func (nrseg *nrseg) Inspect(filename string, src []byte) error {
 				if _, t := parseParams(fd.Type); !(t == TypeContext || t == TypeHttpRequest) {
 					return false
 				}
-
 				if !existFromContext(pkg, fd.Body.List[0]) {
 					nrseg.errFlag = true
 					nrseg.reportf(filename, fs, fd.Pos(), fd)

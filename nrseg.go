@@ -18,11 +18,12 @@ import (
 var (
 	// ErrShowVersion returns when set version flag.
 	ErrShowVersion = errors.New("show version")
+	ErrFlagTrue    = errors.New("find error")
 )
 
 type nrseg struct {
 	inspectMode          bool
-	in, dist             string
+	in, dest             string
 	ignoreDirs           []string
 	outStream, errStream io.Writer
 	errFlag              bool
@@ -51,6 +52,10 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 	flags.StringVar(&ignoreDirs, "ignore", "", idesc)
 	flags.StringVar(&ignoreDirs, "i", "", idesc)
 
+	var destDir string
+	odesc := "destination directory."
+	flags.StringVar(&destDir, "destination", "", odesc)
+
 	if err := flags.Parse(args[1:]); err != nil {
 		return nil, err
 	}
@@ -76,6 +81,7 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 
 	return &nrseg{
 		in:         dir,
+		dest:       destDir,
 		ignoreDirs: dirs,
 		outStream:  outStream,
 		errStream:  errStream,
@@ -120,12 +126,12 @@ func fill2(args []string, outStream, errStream io.Writer, version, revision stri
 
 	dir := "./"
 	nargs := flags.Args()
-	if len(nargs) > 2 {
+	if len(nargs) > 1 {
 		msg := "execution path must be only one or no-set(current directory)."
 		return nil, fmt.Errorf(msg)
 	}
-	if len(nargs) == 2 {
-		dir = nargs[1]
+	if len(nargs) == 1 {
+		dir = nargs[0]
 	}
 
 	return &nrseg{
@@ -182,8 +188,8 @@ func (n *nrseg) run() error {
 				return err
 			}
 			if !bytes.Equal(org, got) {
-				if len(n.dist) != 0 && n.in != n.dist {
-					return n.writeOtherPath(n.in, n.dist, path, got)
+				if len(n.dest) != 0 && n.in != n.dest {
+					return n.writeOtherPath(n.in, n.dest, path, got)
 				}
 				if _, err := f.WriteAt(got, 0); err != nil {
 					return err
@@ -238,11 +244,12 @@ func (n *nrseg) reportf(filename string, fs *token.FileSet, pos token.Pos, fd *a
 		}
 	}
 
+	p := fs.File(pos).Position(pos)
 	if len(rcv) != 0 {
-		fmt.Fprintf(n.outStream, "%s:%d:1: %s.%s no insert segment\n", filename, fs.File(pos).Line(pos), rcv, fd.Name.Name)
+		fmt.Fprintf(n.outStream, "%s:%d:%d: %s.%s no insert segment\n", p.Filename, p.Line, p.Column, rcv, fd.Name.Name)
 		return
 	}
-	fmt.Fprintf(n.outStream, "%s:%d:1: %s no insert segment\n", filename, fs.File(pos).Line(pos), fd.Name.Name)
+	fmt.Fprintf(n.outStream, "%s:%d:%d: %s no insert segment\n", p.Filename, p.Line, p.Column, fd.Name.Name)
 }
 
 // Run is entry point.
@@ -259,7 +266,7 @@ func Run(args []string, outStream, errStream io.Writer, version, revision string
 	}
 	err = nrseg.run()
 	if nrseg.errFlag {
-		err = errors.New("find error")
+		err = ErrFlagTrue
 	}
 	return err
 }
