@@ -33,7 +33,7 @@ func (nrseg *nrseg) Inspect(filename string, src []byte) error {
 				return false
 			}
 			if fd.Body != nil && len(fd.Body.List) > 0 {
-				if _, t := parseParams(fd.Type); !(t == TypeContext || t == TypeHttpRequest) {
+				if _, t := parseParams(f.Imports, fd.Type); !(t == TypeContext || t == TypeHttpRequest) {
 					return false
 				}
 				if !existFromContext(pkg, fd.Body.List[0]) {

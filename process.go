@@ -42,7 +42,7 @@ func Process(filename string, src []byte) ([]byte, error) {
 			}
 			if fd.Body != nil && len(fd.Body.List) > 0 {
 				sn := getSegName(fd)
-				vn, t := parseParams(fd.Type)
+				vn, t := parseParams(f.Imports, fd.Type)
 				var ds ast.Stmt
 				switch t {
 				case TypeContext:
@@ -225,19 +225,24 @@ const (
 	TypeUnknown     = "Unknown"
 )
 
-func parseParams(t *ast.FuncType) (string, string) {
+var types = map[string]string{
+	TypeContext:     "\"context\"",
+	TypeHttpRequest: "\"net/http\"",
+}
+
+func parseParams(is []*ast.ImportSpec, t *ast.FuncType) (string, string) {
+	var cname = getImportName(is, TypeContext)
+	var hname = getImportName(is, TypeHttpRequest)
 	n, typ := "", TypeUnknown
 	for _, f := range t.Params.List {
 		if se, ok := f.Type.(*ast.SelectorExpr); ok {
-			// TODO: support named import
-			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "context" && se.Sel.Name == "Context" {
+			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == cname && se.Sel.Name == "Context" {
 				return f.Names[0].Name, TypeContext
 			}
 		}
 		if se, ok := f.Type.(*ast.StarExpr); ok {
 			if se, ok := se.X.(*ast.SelectorExpr); ok {
-				// TODO: support named import
-				if idt, ok := se.X.(*ast.Ident); ok && idt.Name == "http" && se.Sel.Name == "Request" {
+				if idt, ok := se.X.(*ast.Ident); ok && idt.Name == hname && se.Sel.Name == "Request" {
 					n = f.Names[0].Name
 					typ = TypeHttpRequest
 				}
@@ -245,4 +250,14 @@ func parseParams(t *ast.FuncType) (string, string) {
 		}
 	}
 	return n, typ
+}
+
+func getImportName(is []*ast.ImportSpec, typ string) string {
+	var def = strings.Replace(strings.Split(typ, ".")[0], "*", "", 1)
+	for _, i := range is {
+		if i.Name != nil && i.Path != nil && i.Path.Value == types[typ] {
+			return i.Name.Name
+		}
+	}
+	return def
 }

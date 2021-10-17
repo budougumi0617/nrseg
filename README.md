@@ -100,6 +100,7 @@ func IgnoreHandler(w http.ResponseWriter, req *http.Request) {
   - The function/method signature has `*http.Request`.
       - `defer newrelic.FromContext(req.Context()).StartSegment("func_name").End()`
 - [x] Support any variable name of `context.Context`/`*http.Request`.
+- [x] Support import alias of `"context"`/`"net/http"`.
 - [x] Use function/method name to segment name.
 - [x] This processing is recursively repeated.
 - [x] Able to ignore function/method by `nrseg:ignore` comment.
