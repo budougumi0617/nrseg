@@ -335,6 +335,19 @@ func Hoge(ctx context.Context) {}
 			wantName: "ctx", wantType: TypeContext,
 		},
 		{
+			name: "NamedContext",
+			src: `
+package main
+
+import (
+	c "context"
+)
+
+func Hoge(ctx c.Context) {}
+`,
+			wantName: "ctx", wantType: TypeContext,
+		},
+		{
 			name: "Http",
 			src: `
 package main
@@ -344,6 +357,20 @@ import (
 )
 
 func SampleHandler(w http.ResponseWriter, req *http.Request) {}
+`,
+			wantName: "req", wantType: TypeHttpRequest,
+		},
+
+		{
+			name: "NamedHttp",
+			src: `
+package main
+
+import (
+	h "net/http"
+)
+
+func SampleHandler(w h.ResponseWriter, req *h.Request) {}
 `,
 			wantName: "req", wantType: TypeHttpRequest,
 		},
@@ -364,12 +391,109 @@ func SampleHandler(w http.ResponseWriter, req *http.Request) {}
 					break
 				}
 			}
-			name, gtype := parseParams(decl.Type)
+			name, gtype := parseParams(f.Imports, decl.Type)
 			if name != tt.wantName {
 				t.Errorf("parseParams() name = %q, want %q", name, tt.wantName)
 			}
 			if gtype != tt.wantType {
 				t.Errorf("parseParams() type = %q, want %q", gtype, tt.wantType)
+			}
+		})
+	}
+}
+
+func Test_getImportName(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string
+		typ  string
+		want string
+	}{
+		{
+			name: "Context",
+			src: `
+package main
+
+import (
+	"context"
+)
+
+func Hoge() {}`,
+			typ: TypeContext, want: "context",
+		},
+		{
+			name: "NoContext",
+			src: `
+package main
+
+import (
+	"net/http"
+)
+
+func Hoge() {}`,
+			typ: TypeContext, want: "context",
+		},
+		{
+			name: "NamedContext",
+			src: `
+package main
+
+import (
+	c "context"
+)
+
+func Hoge() {}`,
+			typ: TypeContext, want: "c",
+		},
+		{
+			name: "Http",
+			src: `
+package main
+
+import (
+	"net/http"
+)
+
+func Hoge() {}`,
+			typ: TypeHttpRequest, want: "http",
+		},
+		{
+			name: "NoHttp",
+			src: `
+package main
+
+import (
+	"context"
+)
+
+func Hoge() {}`,
+			typ: TypeHttpRequest, want: "http",
+		},
+		{
+			name: "NamedHttp",
+			src: `
+package main
+
+import (
+	myHttp "net/http"
+)
+
+func Hoge() {}`,
+			typ: TypeHttpRequest, want: "myHttp",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			fs := token.NewFileSet()
+			f, err := parser.ParseFile(fs, "sample.go", tt.src, parser.Mode(0))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := getImportName(f.Imports, tt.typ); got != tt.want {
+				t.Errorf("getImportName() = %v, want %v", got, tt.want)
 			}
 		})
 	}
