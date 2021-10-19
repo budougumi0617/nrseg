@@ -129,7 +129,7 @@ func validate(t *testing.T, gotpath, wantpath string) {
 		}
 		rel, err := filepath.Rel(gotpath, path)
 		if err != nil {
-			t.Errorf("fileapth.Rel(): not want error at %q: %v", path, err)
+			t.Errorf("filepath.Rel(): not want error at %q: %v", path, err)
 			return err
 		}
 		wfp := filepath.Join(wantpath, rel)

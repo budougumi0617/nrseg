@@ -60,7 +60,7 @@ func fill(args []string, outStream, errStream io.Writer, version, revision strin
 		return nil, err
 	}
 	if v {
-		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, version, revision)
+		fmt.Fprintf(errStream, "%s version %q, revision %q\n", cn, version, revision)
 		return nil, ErrShowVersion
 	}
 
@@ -115,7 +115,7 @@ func fill2(args []string, outStream, errStream io.Writer, version, revision stri
 		return nil, err
 	}
 	if v {
-		fmt.Fprintf(errStream, "%s version %q, revison %q\n", cn, version, revision)
+		fmt.Fprintf(errStream, "%s version %q, revision %q\n", cn, version, revision)
 		return nil, ErrShowVersion
 	}
 

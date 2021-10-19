@@ -158,7 +158,7 @@ app, err := newrelic.NewApplication(
 $ go install github.com/budougumi0617/nrseg/cmd/nrseg
 ```
 
-Built binaries are available on gihub releases. https://github.com/budougumi0617/nrseg/releases
+Built binaries are available on github releases. https://github.com/budougumi0617/nrseg/releases
 
 ### MacOS
 If you want to install on MacOS, you can use Homebrew.
