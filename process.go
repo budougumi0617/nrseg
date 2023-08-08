@@ -237,14 +237,18 @@ func parseParams(is []*ast.ImportSpec, t *ast.FuncType) (string, string) {
 	for _, f := range t.Params.List {
 		if se, ok := f.Type.(*ast.SelectorExpr); ok {
 			if idt, ok := se.X.(*ast.Ident); ok && idt.Name == cname && se.Sel.Name == "Context" {
-				return f.Names[0].Name, TypeContext
+				if len(f.Names) > 0 && len(f.Names[0].Name) > 0 {
+					return f.Names[0].Name, TypeContext
+				}
 			}
 		}
 		if se, ok := f.Type.(*ast.StarExpr); ok {
 			if se, ok := se.X.(*ast.SelectorExpr); ok {
 				if idt, ok := se.X.(*ast.Ident); ok && idt.Name == hname && se.Sel.Name == "Request" {
-					n = f.Names[0].Name
-					typ = TypeHttpRequest
+					if len(f.Names) > 0 && len(f.Names[0].Name) > 0 {
+						n = f.Names[0].Name
+						typ = TypeHttpRequest
+					}
 				}
 			}
 		}
