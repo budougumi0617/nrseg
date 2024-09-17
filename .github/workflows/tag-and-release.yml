@@ -2,8 +2,8 @@ name: tag-and-release
 
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+    branches:
+      - master
 jobs:
   tagpr:
     runs-on: ubuntu-latest
