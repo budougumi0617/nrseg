@@ -1,68 +1,73 @@
+version: 2
+
 before:
   hooks:
-    # you may remove this if you don't use vgo
+    - go mod download
     - go mod tidy
-    # you may remove this if you don't need go generate
-    #- go generate ./...
+
 builds:
-  -
-    main: ./cmd/nrseg
+  - id: nrseg-darwin
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.Revision={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/nrseg/main.go
+  - id: nrseg-linux
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/nrseg/main.go
+  - id: nrseg-windows
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    main: ./cmd/nrseg/main.go
+
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - format: 'tar.gz'
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - CHANGELOG.md
+      - LICENSE.txt
+      - README.md
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-brews:
-  -
-    # Name template of the recipe
-    # Default to project name
-    name: nrseg
+      - "^docs:"
+      - "^test:"
 
-    # Github repository to push the tap to.
-    tap:
+brews:
+  - name: nrseg
+    url_template: "https://github.com/budougumi0617/nrseg/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    repository:
       owner: budougumi0617
       name: homebrew-tap
-
-    # Template for the url which is determined by the given Token (github or gitlab)
-    # Default for github is "https://github.com/<repo_owner>/<repo_name>/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    # Default for gitlab is "https://gitlab.com/<repo_owner>/<repo_name>/uploads/{{ .ArtifactUploadHash }}/{{ .ArtifactName }}"
-    url_template: "https://github.com/budougumi0617/nrseg/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-
-    # Git author used to commit to the repository.
-    # Defaults are shown.
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
-      name: budougumi0617
-      email: budougumi0617@gmail.com
-
-    # Your app's homepage.
-    # Default is empty.
+      name: "github-actions[bot]"
+      email: "github-actions[bot]@users.noreply.github.com"
     homepage: "https://github.com/budougumi0617/nrseg"
-
-    # Your app's description.
-    # Default is empty.
     description: "Insert function segments into any function/method for Newrelic APM."
-
-    # So you can `brew test` your formula.
-    # Default is empty.
-    test: |
-      system "#{bin}/nrseg -h"
-    # Custom install script for brew.
-    # Default is 'bin.install "program"'.
+    license: "MIT"
     install: |
       bin.install "nrseg"
+    test: |
+      system "#{bin}/nrseg -h"
