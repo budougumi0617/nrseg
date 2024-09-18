@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.7](https://github.com/budougumi0617/nrseg/compare/v0.0.6...v0.0.7) - 2024-09-18
+- build: bump up go version by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/28
+
 ## [v0.0.6](https://github.com/budougumi0617/nrseg/compare/v0.0.5...v0.0.6) - 2024-09-18
 - refactoring by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/16
 - fix typos by @kdnakt in https://github.com/budougumi0617/nrseg/pull/19
