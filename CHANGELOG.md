@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.8](https://github.com/budougumi0617/nrseg/compare/v0.0.7...v0.0.8) - 2024-09-18
+- fix: fix goreleaser settings by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/30
+
 ## [v0.0.7](https://github.com/budougumi0617/nrseg/compare/v0.0.6...v0.0.7) - 2024-09-18
 - build: bump up go version by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/28
 
