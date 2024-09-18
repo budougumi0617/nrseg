@@ -36,16 +36,14 @@ builds:
     main: ./cmd/nrseg/main.go
 
 archives:
-  - format: 'tar.gz'
-    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  - format: "tar.gz"
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - CHANGELOG.md
-      - LICENSE.txt
+      - LICENSE
       - README.md
 checksum:
   name_template: "checksums.txt"
-snapshot:
-  name_template: "{{ .Tag }}-next"
 
 changelog:
   sort: asc

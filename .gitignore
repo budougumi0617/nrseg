@@ -17,3 +17,4 @@
 # vendor/
 tmp/
 nrseg
+dist/
