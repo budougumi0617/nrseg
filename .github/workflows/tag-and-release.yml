@@ -40,8 +40,8 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
           owner: "budougumi0617"
           repositories: |
-            "nrseg"
-            "homebrew-tap"
+            nrseg
+            homebrew-tap
       - name: Checkout
         uses: actions/checkout@v4
         with:
