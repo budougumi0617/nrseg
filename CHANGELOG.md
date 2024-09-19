@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.10](https://github.com/budougumi0617/nrseg/compare/v0.0.9...v0.0.10) - 2024-09-19
+- ci: fix setting by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/34
+
 ## [v0.0.9](https://github.com/budougumi0617/nrseg/compare/v0.0.8...v0.0.9) - 2024-09-19
 - ci: fix permission by @budougumi0617 in https://github.com/budougumi0617/nrseg/pull/32
 
