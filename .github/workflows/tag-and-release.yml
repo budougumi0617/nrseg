@@ -39,7 +39,9 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
           owner: "budougumi0617"
-          repositories: "homebrew-tap"
+          repositories: |
+            "nrseg"
+            "homebrew-tap"
       - name: Checkout
         uses: actions/checkout@v4
         with:
